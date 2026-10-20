@@ -1,0 +1,28 @@
+{
+  "$schema": "https://schema.tauri.app/capability/1",
+  "identifier": "adat-remote",
+  "description": "Minimal IPC for the remote app webview (app.eayar.com, adat.app): drag the window from the top bar, the page's window menu (minimize / maximize / full screen / close) on every platform, since the system's window buttons are hidden, and printing straight to a printer of this computer (list the printers, print the page shown, and listen to the \"printers\" event that brings their state live). Nothing else is exposed, and updating the app itself (check app.eayar.com/downloads/update.json, download and install the signed installer, restart). Nothing else is exposed.",
+  "windows": [
+    "main"
+  ],
+  "remote": {
+    "urls": [
+      "https://adat.app",
+      "https://app.eayar.com"
+    ]
+  },
+  "permissions": [
+    "core:window:allow-start-dragging",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-is-fullscreen",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-close",
+    "allow-printers",
+    "allow-print-page",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "updater:default",
+    "process:allow-restart"
+  ]
+}

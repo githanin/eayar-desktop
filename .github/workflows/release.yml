@@ -1,0 +1,87 @@
+name: Desktop release
+
+# Builds installers for macOS / Windows / Linux and attaches them to a GitHub release, with
+# the signed updater artifacts and a `latest.json` for the in-app updater (the app reads it
+# as app.eayar.com/downloads/update.json, see README.md). Triggered by pushing a tag
+# like `desktop-v0.1.0`. The release notes are the tag's paragraph of CHANGELOG.md.
+on:
+  push:
+    tags: ['desktop-v*']
+
+permissions:
+  contents: write
+
+# Every action is pinned to a commit (its version in a comment): this job holds the updater's
+# signing key, and a tag (v0, v2…) can be moved to other code by whoever controls the action.
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest        # one universal .dmg (Apple Silicon + Intel)
+            args: --target universal-apple-darwin
+          - os: ubuntu-22.04        # .deb
+            args: ''
+          - os: windows-latest      # .msi
+            args: ''
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
+        with:
+          toolchain: stable  # pinned by commit, the action can no longer read it from the ref
+
+      - name: Add macOS universal targets
+        if: matrix.os == 'macos-latest'
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - name: Install Tauri system deps (Linux webview)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src-tauri
+
+      - name: Install CLI deps
+        run: npm ci
+
+      # What this version brings, from CHANGELOG.md (its "## <version>" paragraph): the body
+      # of the GitHub release, and the notes the app shows when the update is ready.
+      - name: Release notes from the changelog
+        id: notes
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#desktop-v}"
+          notes="$(awk -v v="$version" '/^## /{p = ($2 == v)} p && !/^## /' CHANGELOG.md | sed '/^[[:space:]]*$/d')"
+          { echo "body<<NOTES"; echo "${notes:-eayar pour le bureau $version.}"; echo "NOTES"; } >> "$GITHUB_OUTPUT"
+
+      - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # The updater's signing key (README.md, "Updates"): every installer is
+          # signed, and the app installs only what this key signed.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: .
+          tagName: ${{ github.ref_name }}
+          releaseName: 'eayar Desktop ${{ github.ref_name }}'
+          releaseBody: ${{ steps.notes.outputs.body }}
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true
+          args: ${{ matrix.args }}

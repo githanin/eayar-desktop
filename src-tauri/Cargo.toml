@@ -1,0 +1,49 @@
+[package]
+name = "adat-desktop"
+version = "0.6.0"
+description = "Adat desktop — a lightweight shell that always opens the latest adat.app"
+edition = "2021"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+# The context macro embeds the plugins' configuration (tauri.conf.json "plugins") as JSON.
+serde_json = "1"
+# The key that brings Adat forward from anywhere and sends it away again.
+# 2.3 is the last line that works with Tauri 2.11 (2.4 would upgrade Tauri).
+tauri-plugin-global-shortcut = "~2.3"
+# Updating the app itself (src/main.rs): reads adat.app/downloads/update.json, downloads the
+# signed installer and installs it; the page restarts the app through tauri-plugin-process.
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+
+# The crates below are the ones the webview already uses on each system (same
+# versions, already in Cargo.lock): naming them only reaches more of their API.
+
+# Hiding macOS's own window buttons (the page draws one window menu instead),
+# and printing (src/printing.rs).
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSWindow", "NSButton", "NSControl", "NSView", "NSResponder", "NSPrinter", "NSPrintInfo", "NSPrintOperation"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSEnumerator", "NSGeometry", "NSObject", "NSString"] }
+objc2-web-kit = { version = "0.3", default-features = false, features = ["std", "objc2-app-kit", "WKWebView"] }
+
+# Printing on Windows (src/printing.rs): the printers of the system with their state
+# (PRINTER_INFO_2 needs the Gdi and Security parts), and WebView2's printing; links opened in
+# the browser (src/links.rs: Shell, WindowsAndMessaging).
+[target.'cfg(windows)'.dependencies]
+webview2-com = "0.39"
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Printing", "Win32_Security", "Win32_Storage_Xps", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+
+# Printing on Linux (src/printing.rs): GTK's list of printers, WebKitGTK's printing.
+[target.'cfg(any(target_os = "linux", target_os = "dragonfly", target_os = "freebsd", target_os = "netbsd", target_os = "openbsd"))'.dependencies]
+gtk = "0.18"
+webkit2gtk = "2.0"
+
+[profile.release]
+codegen-units = 1
+lto = true
+strip = true

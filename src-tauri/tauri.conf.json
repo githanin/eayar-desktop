@@ -1,0 +1,70 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "eayar",
+  "version": "0.6.0",
+  "identifier": "app.adat.desktop",
+  "build": {
+    "devUrl": "http://localhost:3001",
+    "beforeDevCommand": {
+      "script": "pnpm install --frozen-lockfile --prefer-offline && pnpm dev --filter @adat/studio",
+      "cwd": "../../web"
+    },
+    "frontendDist": "https://app.eayar.com"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "eayar",
+        "create": false,
+        "width": 1280,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
+        "center": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "userAgent": "Mozilla/5.0 AdatDesktop/0.6.0 (+https://app.eayar.com)"
+      }
+    ],
+    "security": {
+      "csp": null
+    },
+    "withGlobalTauri": true
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "app",
+      "dmg",
+      "msi",
+      "deb"
+    ],
+    "category": "Business",
+    "shortDescription": "eayar — la bonne pièce, du premier coup.",
+    "longDescription": "eayar pour le bureau : une application légère qui ouvre toujours la dernière version de app.eayar.com.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "createUpdaterArtifacts": true,
+    "windows": {
+      "wix": {
+        "upgradeCode": "8FCD38C2-121B-5857-B71D-B22FB9A982BC"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFEOUQ2MjYyNTMwOUZBNzMKUldSeitnbFRZbUtkSFVoQmV6cnp1WUdEWlZIVmljWmFNS0ZKb003NmdYT0JYNkM2VnYzQWpzUjYK",
+      "endpoints": [
+        "https://app.eayar.com/downloads/update.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}
