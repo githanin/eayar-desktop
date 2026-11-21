@@ -4,6 +4,19 @@ Chaque version a son paragraphe sous `## <version>` : c'est ce que l'application
 le bouton de mise à jour, quand cette version est prête (le workflow de release le met dans
 `update.json`). Écrit pour celui qui utilise Adat, en français, en quelques lignes.
 
+## 0.7.0
+
+- eayar devient **Ayar** : l'application ouvre maintenant app.ayar.ma.
+- Connectez-vous une fois après la mise à jour, en scannant le code QR avec l'application Ayar du téléphone : vos imprimantes, vos modèles de bons et vos réglages restent.
+
+## 0.6.1
+
+- Plein écran sans bande noire en bas, à la place de la barre des tâches de Windows.
+- La touche qui fait venir eayar et le renvoie marche à chaque fois ; sur Windows, la touche **Pause** le fait aussi.
+- Sans connexion internet, eayar montre sa propre page « Pas de connexion internet » au lieu de la page d'erreur, et revient tout seul dès que la connexion revient.
+- Plus léger sur les petits ordinateurs : les imprimantes sont vérifiées moins souvent, et plus du tout quand eayar est réduit.
+- eayar ne s'ouvre qu'une fois : le rouvrir ramène la fenêtre déjà ouverte.
+
 ## 0.6.0
 
 - Adat devient **eayar** : nouveau nom et nouvelle icône. L'application ouvre maintenant app.eayar.com.

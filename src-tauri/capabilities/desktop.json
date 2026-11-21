@@ -1,22 +1,17 @@
 {
   "$schema": "https://schema.tauri.app/capability/1",
-  "identifier": "adat-remote",
-  "description": "Minimal IPC for the remote app webview (app.eayar.com, adat.app): drag the window from the top bar, the page's window menu (minimize / maximize / full screen / close) on every platform, since the system's window buttons are hidden, and printing straight to a printer of this computer (list the printers, print the page shown, and listen to the \"printers\" event that brings their state live). Nothing else is exposed, and updating the app itself (check app.eayar.com/downloads/update.json, download and install the signed installer, restart). Nothing else is exposed.",
+  "identifier": "eayar-app",
+  "description": "The page's commands, for Ayar's own app only: https://app.ayar.ma (app.eayar.com up to 0.6.1), the build's frontendDist, which Tauri calls « local » (localhost:3001, the devUrl, in `tauri dev`). No other site gets any command: not app.eayar.com any more, not ayar.ma, not api.ayar.ma, not eayar.com, not Google's sign-in, not adat.app (another product since 20 Oct 2026). Tauri cannot give commands to some pages of an address and not others: a call carries only the page's origin (the Origin header of the IPC request on macOS and Windows), so every page of app.ayar.ma gets the same commands. They are: dragging the window from the top bar, the page's window menu (minimize / maximize / full screen — through the app's own `full_screen`, which leaves maximized first so no band stays where the taskbar is — / close) since the system's window buttons are hidden; printing straight to a printer of this computer (list the printers, print the page shown, listen to the \"printers\" event that brings their state live); updating the app itself (check app.ayar.ma/downloads/update.json, download and install the installer signed with the app's key, restart). Nothing else is exposed.",
   "windows": [
     "main"
   ],
-  "remote": {
-    "urls": [
-      "https://adat.app",
-      "https://app.eayar.com"
-    ]
-  },
+  "local": true,
   "permissions": [
     "core:window:allow-start-dragging",
     "core:window:allow-minimize",
     "core:window:allow-toggle-maximize",
     "core:window:allow-is-fullscreen",
-    "core:window:allow-set-fullscreen",
+    "allow-full-screen",
     "core:window:allow-close",
     "allow-printers",
     "allow-print-page",

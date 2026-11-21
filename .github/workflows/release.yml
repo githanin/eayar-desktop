@@ -2,7 +2,7 @@ name: Desktop release
 
 # Builds installers for macOS / Windows / Linux and attaches them to a GitHub release, with
 # the signed updater artifacts and a `latest.json` for the in-app updater (the app reads it
-# as app.eayar.com/downloads/update.json, see README.md). Triggered by pushing a tag
+# as app.ayar.ma/downloads/update.json (app.eayar.com's for 0.6.x), see README.md). Triggered by pushing a tag
 # like `desktop-v0.1.0`. The release notes are the tag's paragraph of CHANGELOG.md.
 on:
   push:
@@ -67,7 +67,7 @@ jobs:
         run: |
           version="${GITHUB_REF_NAME#desktop-v}"
           notes="$(awk -v v="$version" '/^## /{p = ($2 == v)} p && !/^## /' CHANGELOG.md | sed '/^[[:space:]]*$/d')"
-          { echo "body<<NOTES"; echo "${notes:-eayar pour le bureau $version.}"; echo "NOTES"; } >> "$GITHUB_OUTPUT"
+          { echo "body<<NOTES"; echo "${notes:-Ayar pour le bureau $version.}"; echo "NOTES"; } >> "$GITHUB_OUTPUT"
 
       - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2
         env:
@@ -79,7 +79,7 @@ jobs:
         with:
           projectPath: .
           tagName: ${{ github.ref_name }}
-          releaseName: 'eayar Desktop ${{ github.ref_name }}'
+          releaseName: 'Ayar Desktop ${{ github.ref_name }}'
           releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
           prerelease: false

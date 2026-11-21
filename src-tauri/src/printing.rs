@@ -22,10 +22,10 @@
 
 use serde::{Deserialize, Serialize};
 use std::net::{TcpStream, ToSocketAddrs};
-use std::sync::mpsc;
+use std::sync::{mpsc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 #[derive(Serialize, Clone, PartialEq, Debug)]
 pub struct Printer {
@@ -134,8 +134,13 @@ struct UsbDevice {
 
 type Done = Box<dyn FnOnce(Result<(), String>) + Send>;
 
-/// How often the printers are looked at again.
-const EVERY: Duration = Duration::from_secs(3);
+/// How often the printers are looked at again: every 15 s while eayar is in front, every minute
+/// while another app is, never while it is minimized or hidden — and at once when it comes back to
+/// the front, at most once in 3 s. Every 3 s, all day, kept the shops' old PCs busy (the print
+/// service, a network printer that is off answering after its timeout; Hanin, 9 Nov 2026).
+const IN_FRONT: Duration = Duration::from_secs(15);
+const BEHIND: Duration = Duration::from_secs(60);
+const AT_MOST: Duration = Duration::from_secs(3);
 /// How long a network printer has to answer (one that is on answers in milliseconds).
 const ANSWER_WITHIN: Duration = Duration::from_millis(1500);
 
@@ -179,17 +184,45 @@ pub async fn print_page(window: tauri::WebviewWindow, printer: String, paper: Op
     rx.recv().await.unwrap_or_else(|| Err("print-failed".into()))
 }
 
+/// What wakes the watch up (eayar coming back to the front).
+struct Wake(Mutex<mpsc::Sender<()>>);
+
+/// eayar is in front again: the printers looked at now (main.rs, the window's events).
+pub fn wake(app: &AppHandle) {
+    if let Some(wake) = app.try_state::<Wake>() {
+        if let Ok(tx) = wake.0.lock() {
+            let _ = tx.send(());
+        }
+    }
+}
+
 /// Looks at the printers again and again, and tells the page when anything changed.
 pub fn watch(app: AppHandle) {
+    let (tx, rx) = mpsc::channel::<()>();
+    app.manage(Wake(Mutex::new(tx)));
     thread::spawn(move || {
         let mut last: Option<Vec<Printer>> = None;
         loop {
-            let now = current();
-            if last.as_ref() != Some(&now) {
-                let _ = app.emit("printers", &now);
-                last = Some(now);
+            let place = crate::window_place(&app);
+            if place != crate::Place::Away {
+                let now = current();
+                if last.as_ref() != Some(&now) {
+                    let _ = app.emit("printers", &now);
+                    last = Some(now);
+                }
             }
-            thread::sleep(EVERY);
+            // At most once in 3 s, whatever wakes it.
+            thread::sleep(AT_MOST);
+            let woken = match place {
+                crate::Place::Front => rx.recv_timeout(IN_FRONT - AT_MOST),
+                crate::Place::Behind => rx.recv_timeout(BEHIND - AT_MOST),
+                crate::Place::Away => rx.recv().map_err(|_| mpsc::RecvTimeoutError::Disconnected),
+            };
+            if let Err(mpsc::RecvTimeoutError::Disconnected) = woken {
+                return;
+            }
+            // Several wakes at once: one look.
+            while rx.try_recv().is_ok() {}
         }
     });
 }

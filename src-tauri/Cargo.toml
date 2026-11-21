@@ -1,7 +1,7 @@
 [package]
 name = "adat-desktop"
-version = "0.6.0"
-description = "Adat desktop — a lightweight shell that always opens the latest adat.app"
+version = "0.7.0"
+description = "eayar desktop — a lightweight shell that always opens the latest app.ayar.ma"
 edition = "2021"
 publish = false
 
@@ -13,13 +13,14 @@ tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 # The context macro embeds the plugins' configuration (tauri.conf.json "plugins") as JSON.
 serde_json = "1"
-# The key that brings Adat forward from anywhere and sends it away again.
+# The key that brings eayar forward from anywhere and sends it away again.
 # 2.3 is the last line that works with Tauri 2.11 (2.4 would upgrade Tauri).
 tauri-plugin-global-shortcut = "~2.3"
-# Updating the app itself (src/main.rs): reads adat.app/downloads/update.json, downloads the
+# Updating the app itself (src/main.rs): reads app.ayar.ma/downloads/update.json, downloads the
 # signed installer and installs it; the page restarts the app through tauri-plugin-process.
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
+tauri-plugin-single-instance = "2"
 
 # The crates below are the ones the webview already uses on each system (same
 # versions, already in Cargo.lock): naming them only reaches more of their API.

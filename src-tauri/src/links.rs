@@ -1,32 +1,72 @@
-// Where the window may go (security audit of 13 Oct 2026). It shows only the app — eayar.com and
-// adat.app and their subdomains (app.eayar.com since 0.6.0, 20 Oct 2026; the database's sign-in at
-// api.adat.app) — and Google's sign-in, which comes back to the app. Any other address, from a link or from a page sending the window elsewhere,
-// opens in the computer's own browser, with its address bar, instead of inside Adat's window where
-// it would look like Adat. Links opening a new window (a customer's WhatsApp…) go there too; Adat's
-// own keep opening as before.
+// Where the window may go (security audit of 13 Oct 2026; adat.app left out 25 Oct 2026). It shows
+// only Ayar — ayar.ma and its subdomains (app.ayar.ma, the app; api.ayar.ma, the database's
+// sign-in), and eayar.com's, its addresses until 20 Nov 2026 — and Google's sign-in, which comes
+// back to the app. adat.app is not eayar's
+// any more (another product since 20 Oct 2026): it opens in the browser like any other site. Any
+// other address, from a link or from a page sending the window elsewhere, opens in the computer's
+// own browser, with its address bar, instead of inside eayar's window where it would look like
+// eayar.
 //
-// The page's commands (printing, updates) are allowed to https://app.eayar.com and https://adat.app
-// only anyway (capabilities/desktop.json): another site shown here could not use them.
+// A link or a script opening a new window (a customer's WhatsApp, a picture in its own tab…) never
+// gets a second window of the app: such a window would be the webview's own, made without these
+// checks, free to go anywhere afterwards. Its address opens in the browser instead, eayar's own
+// included.
+//
+// The page's commands (printing, updates) are allowed to https://app.ayar.ma only anyway
+// (capabilities/desktop.json): another site shown here, app.eayar.com included, could not use them.
 
 use tauri::webview::{NewWindowFeatures, NewWindowResponse};
 use tauri::{Runtime, Url};
 
-/// The window's navigation: true keeps it in the window, false opens it in the browser instead.
-pub fn navigate(url: &Url) -> bool {
-    if stays(url) {
-        return true;
-    }
-    open_outside(url);
-    false
+/// Where an address goes.
+#[derive(Debug, PartialEq, Eq)]
+enum Go {
+    /// Shown in eayar's window.
+    Window,
+    /// Opened in the computer's browser (or its mail app, its phone app).
+    Browser,
+    /// Nowhere: an address no app should be handed (javascript:, data:, file:…).
+    Nowhere,
 }
 
-/// A link or a script opening a new window.
+/// The window's navigation: true keeps it in the window, false opens it in the browser instead.
+pub fn navigate(url: &Url) -> bool {
+    follow(url, navigation(url))
+}
+
+/// A link or a script opening a new window: never a window of the app.
 pub fn new_window<R: Runtime>(url: Url, _features: NewWindowFeatures) -> NewWindowResponse<R> {
-    if adat(&url) {
-        return NewWindowResponse::Allow;
-    }
-    open_outside(&url);
+    follow(&url, popup(&url));
     NewWindowResponse::Deny
+}
+
+fn navigation(url: &Url) -> Go {
+    if stays(url) {
+        Go::Window
+    } else {
+        outside(url)
+    }
+}
+
+/// A new window is never the app's, even for eayar's own pages: the same check as any address
+/// that leaves the window.
+fn popup(url: &Url) -> Go {
+    outside(url)
+}
+
+fn outside(url: &Url) -> Go {
+    if matches!(url.scheme(), "https" | "http" | "mailto" | "tel") {
+        Go::Browser
+    } else {
+        Go::Nowhere
+    }
+}
+
+fn follow(url: &Url, go: Go) -> bool {
+    if go == Go::Browser {
+        platform::open(url.as_str());
+    }
+    go == Go::Window
 }
 
 fn stays(url: &Url) -> bool {
@@ -34,14 +74,17 @@ fn stays(url: &Url) -> bool {
     if cfg!(debug_assertions) && url.host_str() == Some("localhost") {
         return true;
     }
-    url.scheme() == "about" || adat(url) || (url.scheme() == "https" && url.host_str().is_some_and(google_sign_in))
+    url.scheme() == "about" || eayar(url) || (url.scheme() == "https" && url.host_str().is_some_and(google_sign_in))
 }
 
-fn adat(url: &Url) -> bool {
-    url.scheme() == "https"
-        && url.host_str().is_some_and(|host| {
-            ["adat.app", "eayar.com"].iter().any(|ours| host == *ours || host.strip_suffix(ours).is_some_and(|sub| sub.ends_with('.')))
-        })
+/// ayar.ma and eayar.com, and their subdomains, over https.
+fn eayar(url: &Url) -> bool {
+    url.scheme() == "https" && url.host_str().is_some_and(|host| ["ayar.ma", "eayar.com"].iter().any(|domain| ours(host, domain)))
+}
+
+/// The domain itself or one of its subdomains.
+fn ours(host: &str, domain: &str) -> bool {
+    host == domain || host.strip_suffix(domain).and_then(|sub| sub.strip_suffix('.')).is_some_and(|sub| !sub.is_empty())
 }
 
 /// Google's sign-in passes through accounts.google.com, accounts.youtube.com and a country's
@@ -58,12 +101,6 @@ fn google_sign_in(host: &str) -> bool {
         [end] => *end == "com" || end.len() == 2,
         [kind, country] => matches!(*kind, "co" | "com") && country.len() == 2,
         _ => false,
-    }
-}
-
-fn open_outside(url: &Url) {
-    if matches!(url.scheme(), "https" | "http" | "mailto" | "tel") {
-        platform::open(url.as_str());
     }
 }
 
@@ -107,16 +144,24 @@ mod platform {
 mod tests {
     use super::*;
 
+    fn url(address: &str) -> Url {
+        Url::parse(address).unwrap()
+    }
+
     fn stays_at(address: &str) -> bool {
-        stays(&Url::parse(address).unwrap())
+        stays(&url(address))
     }
 
     #[test]
-    fn adat_stays() {
-        assert!(stays_at("https://adat.app/dashboard/business/x"));
+    fn eayar_stays() {
+        assert!(stays_at("https://app.ayar.ma/business/x"));
+        assert!(stays_at("https://ayar.ma/"));
+        assert!(stays_at("https://www.ayar.ma/parts"));
+        assert!(stays_at("https://api.ayar.ma/auth/v1/authorize?provider=google"));
         assert!(stays_at("https://app.eayar.com/business/x"));
         assert!(stays_at("https://eayar.com/"));
-        assert!(stays_at("https://api.adat.app/auth/v1/authorize?provider=google"));
+        assert!(stays_at("https://www.eayar.com/parts"));
+        assert!(stays_at("https://api.eayar.com/auth/v1/authorize?provider=google"));
         assert!(stays_at("about:blank"));
     }
 
@@ -129,16 +174,62 @@ mod tests {
     }
 
     #[test]
+    fn adat_app_is_not_eayar() {
+        // Another product since 20 Oct 2026: the browser, like any other site.
+        for address in [
+            "https://adat.app/dashboard/business/x",
+            "https://api.adat.app/auth/v1/authorize?provider=google",
+            "https://nnpa.adat.app/",
+            "https://ap.adat.app/x.webp",
+        ] {
+            assert!(!stays_at(address), "{address}");
+            assert_eq!(navigation(&url(address)), Go::Browser, "{address}");
+        }
+    }
+
+    #[test]
     fn elsewhere_leaves() {
         assert!(!stays_at("https://wa.me/212600000000"));
-        assert!(!stays_at("http://adat.app/dashboard"));
-        assert!(!stays_at("https://adat.app.evil.com/"));
-        assert!(!stays_at("https://evil-adat.app/"));
         assert!(!stays_at("https://evil-eayar.com/"));
+        assert!(!stays_at("https://evilayar.ma/"));
+        assert!(!stays_at("https://ayar.ma.evil.com/"));
+        assert!(!stays_at("https://app.ayar.ma.evil.com/"));
+        assert!(!stays_at("https://.ayar.ma/"));
+        assert!(!stays_at("http://app.ayar.ma/"));
+        assert!(!stays_at("https://eayar.com.evil.com/"));
         assert!(!stays_at("https://app.eayar.com.evil.com/"));
+        assert!(!stays_at("https://.eayar.com/"));
         assert!(!stays_at("http://app.eayar.com/"));
         assert!(!stays_at("https://accounts.google.evil.com/"));
         assert!(!stays_at("https://www.google.co.evil.com/"));
         assert!(!stays_at("file:///etc/passwd"));
+        assert_eq!(navigation(&url("https://wa.me/212600000000")), Go::Browser);
+        assert_eq!(navigation(&url("mailto:contact@example.com")), Go::Browser);
+        assert_eq!(navigation(&url("tel:+212600000000")), Go::Browser);
+    }
+
+    #[test]
+    fn nothing_handed_to_other_apps_but_web_mail_and_phone() {
+        for address in ["file:///etc/passwd", "javascript:alert(1)", "data:text/html,<b>x</b>", "blob:https://app.eayar.com/1"] {
+            assert_eq!(navigation(&url(address)), Go::Nowhere, "{address}");
+            assert_eq!(popup(&url(address)), Go::Nowhere, "{address}");
+        }
+    }
+
+    #[test]
+    fn popups_never_open_a_window_of_the_app() {
+        // eayar's own pages and Google's sign-in too: a second window would escape these checks.
+        for address in [
+            "https://app.ayar.ma/api/picture?t=x",
+            "https://app.eayar.com/api/picture?t=x",
+            "https://eayar.com/apercu/magasin",
+            "https://accounts.google.com/o/oauth2/v2/auth",
+            "https://adat.app/",
+            "https://wa.me/212600000000",
+            "mailto:contact@example.com",
+        ] {
+            assert_eq!(popup(&url(address)), Go::Browser, "{address}");
+        }
+        assert_eq!(popup(&url("about:blank")), Go::Nowhere);
     }
 }

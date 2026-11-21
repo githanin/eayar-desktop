@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "eayar",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "identifier": "app.adat.desktop",
   "build": {
     "devUrl": "http://localhost:3001",
@@ -9,12 +9,12 @@
       "script": "pnpm install --frozen-lockfile --prefer-offline && pnpm dev --filter @adat/studio",
       "cwd": "../../web"
     },
-    "frontendDist": "https://app.eayar.com"
+    "frontendDist": "https://app.ayar.ma"
   },
   "app": {
     "windows": [
       {
-        "title": "eayar",
+        "title": "Ayar",
         "create": false,
         "width": 1280,
         "height": 800,
@@ -23,7 +23,7 @@
         "center": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
-        "userAgent": "Mozilla/5.0 AdatDesktop/0.6.0 (+https://app.eayar.com)"
+        "userAgent": "Mozilla/5.0 AdatDesktop/0.7.0 (+https://app.ayar.ma)"
       }
     ],
     "security": {
@@ -40,8 +40,8 @@
       "deb"
     ],
     "category": "Business",
-    "shortDescription": "eayar — la bonne pièce, du premier coup.",
-    "longDescription": "eayar pour le bureau : une application légère qui ouvre toujours la dernière version de app.eayar.com.",
+    "shortDescription": "Ayar — la bonne pièce, du premier coup.",
+    "longDescription": "Ayar pour le bureau : une application légère qui ouvre toujours la dernière version de app.ayar.ma.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -60,7 +60,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFEOUQ2MjYyNTMwOUZBNzMKUldSeitnbFRZbUtkSFVoQmV6cnp1WUdEWlZIVmljWmFNS0ZKb003NmdYT0JYNkM2VnYzQWpzUjYK",
       "endpoints": [
-        "https://app.eayar.com/downloads/update.json"
+        "https://app.ayar.ma/downloads/update.json"
       ],
       "windows": {
         "installMode": "passive"
